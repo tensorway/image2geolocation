@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from dataset import Image2GeoDataset
 
-CROATIA_IMAGE_PATH = 'croatia_map.png'
+CROATIA_IMAGE_PATH = 'assets/croatia_map.png'
 RESULT_IMAGE_PATH = 'results/data_map.png'
 SOUTH_BOUNDARY = 42 + 24/60 #23/60 is sea
 NORTH_BOUNDARY = 46 + 33/60
