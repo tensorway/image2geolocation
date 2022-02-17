@@ -11,8 +11,8 @@ class Image2GeoDataset(Dataset):
 
     def __init__(
         self, 
-        images_folder='dataset/lumen-datasci-2022-train/data', 
-        csv_file='dataset/lumen-datasci-2022-train/data.csv', 
+        images_folder='dataset/data', 
+        csv_file='dataset/data.csv', 
         transform=None
         ):
         """
