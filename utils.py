@@ -1,4 +1,5 @@
 import math 
+import torch as th
 
 def great_circle_distance_relative(point1, point2):
     lat1, lon1 = point1
@@ -20,3 +21,26 @@ def great_circle_distance(point1, point2):
     c = great_circle_distance_relative(point1, point2)
     d = R * c; # in km
     return d
+
+def load_model(model, path):
+    try:
+        model.load_state_dict(th.load(path))
+        print(f"loaded model ({type(model).__name__}) from {path}")
+    except:
+        print(f"could not load model ({type(model).__name__}) from {path}")
+
+def save_model(model, path):
+    th.save(model.state_dict(), path)
+
+def seed_everything(seed: int):
+    import random, os
+    import numpy as np
+    import torch
+    
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
