@@ -1,4 +1,6 @@
+import cv2
 import math 
+import numpy as np
 import torch as th
 
 def great_circle_distance_relative(point1, point2):
@@ -44,3 +46,30 @@ def seed_everything(seed: int):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
+
+def draw_prediction(latitude, longitude, croatia_map=None, color=(0, 0, 255), img_path='assets/croatia_map.png'):
+    if croatia_map is None:
+        croatia_map = cv2.imread(img_path)
+    x1 = 0.0
+    x2 = float(np.shape(croatia_map)[0])
+    y1 = float(np.shape(croatia_map)[1])
+    y2 = 0.0
+
+    a1 = 13.184
+    a2 = 19.512
+    b1 = 42.139
+    b2 = 46.582
+
+    #functions to convert coordinates from geographical coordinates to dimensions of pictures
+    def _f(x):
+        return round((a2-a1)*(x-x1)/(x2-x1)+a1, 2)
+    def _g(y):
+        return round((b2-b1)*(y-y1)/(y2-y1)+b1, 2)
+    def f_inv(x):
+        return int((x2-x1)*(x-a1)/(a2-a1)+x1)
+    def g_inv(y):
+        return int((y2-y1)*(y-b1)/(b2-b1)+y1)
+
+    croatia_map = cv2.circle(croatia_map, (f_inv(float(longitude)), g_inv(float(latitude))), 
+                       radius=7, color=color, thickness=-1)
+    return croatia_map
