@@ -15,6 +15,17 @@ class BenchmarkModel(nn.Module):
         else:   
             num_ftrs = self.model.fc.in_features
             self.model.fc = nn.Linear(num_ftrs, 2)
+        self.model_name = model_name
+
+    def embed(self, img):
+        if self.model_name == 'mobilenet_v2':
+            return self.model.features(img).mean(dim=-1).mean(dim=-1)
+        tmp = self.model.fc
+        self.model.fc = nn.Identity()
+        embedding = self.model(img)
+        self.model.fc = tmp
+        return embedding
+
     def forward(self, img, device):
         return self.model(img) + th.tensor([[44.475, 16.475]], device=device) #adding to converge faster
 
@@ -29,3 +40,4 @@ if __name__ == '__main__':
     print(train_transform(img).shape)
     batch = th.cat([train_transform(img).unsqueeze(0) for img in dic['images']], dim=0)
     print(model(batch))
+# %%
