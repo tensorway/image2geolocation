@@ -6,19 +6,20 @@ from PIL import Image
 import torch as th
 import random
 
-class Image2GeoDataset(Dataset):
-    """Image2GeoDataset dataset."""
+class ClassificationDataset(Dataset):
+    """Image2Geo Classification dataset."""
 
     def __init__(
-        self, 
-        images_folder='dataset/data', 
-        csv_file='dataset/data.csv', 
+        self,
+        images_folder='dataset/data',
+        csv_file='dataset/data_with_K-means.csv',
         transform=None
         ):
         """
         Args:
             images_folder (string): Directory with directories of images.
-            csv_file (string): Path to the csv file with annotations.
+            csv_file (string): Path to the csv file with annotations and 
+                classes obtained with K-means.
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
@@ -27,12 +28,13 @@ class Image2GeoDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(self.csv)
-
+        return len(self.csv)    
+    
     def get_labels(self):
         latitudes = self.csv['latitude']
         longitudes = self.csv['longitude']
-        return [ (la, lo) for la, lo in zip(latitudes, longitudes) ]
+        classes = self.csv['CLUSTER_kmeans21']
+        return [ (la, lo, cl) for la, lo, cl in zip(latitudes, longitudes, classes) ]
 
     def __getitem__(self, idx):
         images = []
@@ -42,16 +44,15 @@ class Image2GeoDataset(Dataset):
             if self.transform:
                 image = self.transform(image)
             images.append(image)
-
-        labels = [self.csv['latitude'][idx], self.csv['longitude'][idx]]
+        
+        labels = [self.csv['latitude'][idx], self.csv['longitude'][idx], self.csv['CLUSTER_kmeans21'][idx] ]
         labels = th.tensor(labels, dtype=th.float32)
         sample = {'images': images, 'labels': labels}
 
         return sample
 
-
 if __name__ == '__main__':
-    dataset = Image2GeoDataset()
+    dataset = ClassificationDataset()
     idx = random.randint(0, len(dataset)-1)
     print(dataset[idx])
     dataset[idx]['images'][0].show()
