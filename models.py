@@ -27,7 +27,8 @@ class BenchmarkModel(nn.Module):
         return embedding
 
     def forward(self, img, device):
-        return self.model(img)
+        x = self.model(img)
+        return th.softmax(x,dim=-1).unsqueeze(0)
 
 # %%
 if __name__ == '__main__':

@@ -24,6 +24,7 @@ THE_SEED = 42
 TRAIN_BATCH_SIZE = 2
 VALID_BATCH_SIZE = 1
 
+
 seed_everything(THE_SEED)
 task = Task.init(project_name="image2geolocation", task_name="resnet50_benchmark_dg")
 logger = Logger.current_logger()
@@ -86,7 +87,7 @@ for ep in range(4*20):
         for i in range(TRAIN_BATCH_SIZE):
             x = th.tensor(int(labels[i][2]))
             l = th.tensor([[x], [x], [x], [x]])
-            y = th.zeros([4, 21])
+            y = th.zeros([4, dataset.number_of_classes()])
             y = y.scatter_(1, l, 1)
             y = th.unsqueeze(y,0)
             
@@ -94,7 +95,7 @@ for ep in range(4*20):
         #print(y_onehot.size())
         #print(preds.size())
         y_onehot = th.cat(tuple_of_y)
-        y_onehot = th.reshape(y_onehot, (4*TRAIN_BATCH_SIZE,21))
+        y_onehot = th.reshape(y_onehot, (4*TRAIN_BATCH_SIZE,dataset.number_of_classes()))
         #print(preds)
         #print(y_onehot)
         #loss = F.binary_cross_entropy(y_onehot, preds)
@@ -136,7 +137,7 @@ for ep in range(4*20):
                     for i in range(VALID_BATCH_SIZE):
                         x = th.tensor(int(labels[i][2]))
                         l = th.tensor([[x], [x], [x], [x]])
-                        y = th.zeros([4, 21])
+                        y = th.zeros([4, dataset.number_of_classes()])
                         y = y.scatter_(1, l, 1)
                         y = th.unsqueeze(y,0)
                         
@@ -144,7 +145,7 @@ for ep in range(4*20):
                     #print(y_onehot.size())
                     #print(preds.size())
                     y_onehot = th.cat(tuple_of_y)
-                    y_onehot = th.reshape(y_onehot, (4*VALID_BATCH_SIZE,21))
+                    y_onehot = th.reshape(y_onehot, (4*VALID_BATCH_SIZE,dataset.number_of_classes()))
 
                     #print(y_onehot.size())
                     #print(preds.size())
@@ -178,3 +179,4 @@ save_model(opt, str(OPTIMIZER_PATH).split('.pt')[0] + str(step) + '.pt')
 # %%
 save_model(model, str(MODEL_PATH))
 save_model(opt, str(OPTIMIZER_PATH))
+# %%

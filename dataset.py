@@ -33,7 +33,7 @@ class ClassificationDataset(Dataset):
     def get_labels(self):
         latitudes = self.csv['latitude']
         longitudes = self.csv['longitude']
-        classes = self.csv['CLUSTER_kmeans21']
+        classes = self.csv['CLUSTER_kmeans']
         return [ (la, lo, cl) for la, lo, cl in zip(latitudes, longitudes, classes) ]
 
     def __getitem__(self, idx):
@@ -45,14 +45,18 @@ class ClassificationDataset(Dataset):
                 image = self.transform(image)
             images.append(image)
         
-        labels = [self.csv['latitude'][idx], self.csv['longitude'][idx], self.csv['CLUSTER_kmeans21'][idx] ]
+        labels = [self.csv['latitude'][idx], self.csv['longitude'][idx], self.csv['CLUSTER_kmeans'][idx] ]
         labels = th.tensor(labels, dtype=th.float32)
         sample = {'images': images, 'labels': labels}
 
         return sample
+    
+    def number_of_classes(self):
+        return self.csv['CLUSTER_kmeans'].nunique()
 
 if __name__ == '__main__':
     dataset = ClassificationDataset()
     idx = random.randint(0, len(dataset)-1)
     print(dataset[idx])
     dataset[idx]['images'][0].show()
+    print(dataset.number_of_classes())
