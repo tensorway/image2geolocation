@@ -56,7 +56,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel('resnet50')
+model = BenchmarkModel(model_name = 'resnet50', NUM_OF_CLASSES=dataset.number_of_classes())
 load_model(model, str(MODEL_PATH))
 model.to(device)
 #%%%
@@ -95,7 +95,8 @@ for ep in range(4*20):
         #print(y_onehot.size())
         #print(preds.size())
         y_onehot = th.cat(tuple_of_y)
-        y_onehot = th.reshape(y_onehot, (4*TRAIN_BATCH_SIZE,dataset.number_of_classes()))
+        y_onehot = th.reshape(y_onehot, (1, 4*TRAIN_BATCH_SIZE,dataset.number_of_classes()))
+        
         #print(preds)
         #print(y_onehot)
         #loss = F.binary_cross_entropy(y_onehot, preds)
@@ -145,7 +146,7 @@ for ep in range(4*20):
                     #print(y_onehot.size())
                     #print(preds.size())
                     y_onehot = th.cat(tuple_of_y)
-                    y_onehot = th.reshape(y_onehot, (4*VALID_BATCH_SIZE,dataset.number_of_classes()))
+                    y_onehot = th.reshape(y_onehot, (1,4*VALID_BATCH_SIZE,dataset.number_of_classes()))
 
                     #print(y_onehot.size())
                     #print(preds.size())
