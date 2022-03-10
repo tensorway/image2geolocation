@@ -23,6 +23,7 @@ THE_SEED = 42
 TRAIN_BATCH_SIZE = 64
 VALID_BATCH_SIZE = 32
 
+
 seed_everything(THE_SEED)
 task = Task.init(project_name="image2geolocation", task_name="classification_bench_resnet")
 logger = Logger.current_logger()
@@ -144,14 +145,4 @@ save_model(opt, str(OPTIMIZER_PATH).split('.pt')[0] + str(step) + '.pt')
 # %%
 save_model(model, str(MODEL_PATH))
 save_model(opt, str(OPTIMIZER_PATH))
-#%%
-2+2
-# %%
-loss = th.nn.CrossEntropyLoss()
-input = torch.randn(21, 21)
-# input = input / input.sum(dim=-1, keepdim=True)
-input = th.ones(21, 21)*0.2/21 + th.eye(21)*0.8
-target = th.range(0, 20, dtype=th.long)
-output = loss(input, target)
-output
 # %%
