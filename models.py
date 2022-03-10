@@ -10,24 +10,25 @@ class BenchmarkModel(nn.Module):
         super().__init__()
         th.hub._validate_not_a_forked_repo=lambda a,b,c: True
         self.model = th.hub.load('pytorch/vision:v0.10.0', model_name, pretrained=True)
+        self.model_name = model_name
         if model_name == 'mobilenet_v2':
             self.model.classifier[1] = nn.Linear(1280, 21)
-        else:   
+        elif 'resnet' in self.model_name:
             num_ftrs = self.model.fc.in_features
-            self.model.fc = nn.Linear(num_ftrs, 21)
-        self.model_name = model_name
+            self.classifier = nn.Linear(num_ftrs, 21)
+            self.model.fc = nn.Identity() 
 
     def embed(self, img):
         if self.model_name == 'mobilenet_v2':
             return self.model.features(img).mean(dim=-1).mean(dim=-1)
-        tmp = self.model.fc
-        self.model.fc = nn.Identity()
-        embedding = self.model(img)
-        self.model.fc = tmp
-        return embedding
+        if 'resnet' in self.model_name:
+            return self.model(img)
 
     def forward(self, img, device):
-        return self.model(img)
+        if self.model_name == 'mobilenet_v2':
+            return self.model(img)
+        if 'resnet' in self.model_name:
+            return self.classifier(self.model(img))
 
 # %%
 if __name__ == '__main__':
@@ -43,4 +44,3 @@ if __name__ == '__main__':
     preds = model(batch, device)
     print(preds)
     
-# %%
