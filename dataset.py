@@ -59,6 +59,11 @@ class ClassificationDataset(Dataset):
         rows = df.loc[df['CLUSTER_kmeans'] == class_number]
         la, lo = rows['latitude'].mean(axis=0), rows['longitude'].mean(axis=0)
         return la,lo
+
+    def number_of_occurences(self):
+        for num in range(4):
+            print(self.csv.loc[self.csv['CLUSTER_kmeans'] == num].count())
+
         
 
 
@@ -70,3 +75,4 @@ if __name__ == '__main__':
     dataset[idx]['images'][0].show()
     print(dataset.number_of_classes())
     print(dataset.centroid(3))
+    dataset.number_of_occurences()

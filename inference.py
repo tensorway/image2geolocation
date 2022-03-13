@@ -13,7 +13,9 @@ from utils import load_model, save_model, great_circle_distance, seed_everything
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
 #MODEL_NAME = 'mobilenetv_benc'
 #MODEL_NAME = 'resnet50_bench'
-MODEL_NAME = 'resnet50_bench8923'
+#MODEL_NAME = 'resnet50_bench8923'
+#MODEL_NAME = 'mobilenet_4classes'
+MODEL_NAME = 'mobilenet_4classes_1'
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_classification_'+MODEL_NAME+'.pt')
 THE_SEED = 42
@@ -33,7 +35,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel(model_name='resnet50', NUM_OF_CLASSES = dataset.number_of_classes())
+model = BenchmarkModel(model_name='mobilenet_v2', NUM_OF_CLASSES = dataset.number_of_classes())
 load_model(model, str(MODEL_PATH))
 model.to(device)
 
