@@ -1,5 +1,6 @@
 #%%
 import time
+from importlib_metadata import requires
 import torch
 import random
 import torch as th
@@ -13,19 +14,19 @@ from transforms import train_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'classification_resnet50_bench'
+MODEL_NAME = 'resnet50_benchmark'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
-SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
-SAVE_DELTA_REVERT = 20*60 #in seconds, checkpoint models saved rarely to save storage
+SAVE_DELTA_ALL = 20*60 #in seconds, the model that is stored and overwritten to save space
+SAVE_DELTA_REVERT = 60*60 #in seconds, checkpoint models saved rarely to save storage
 TRAIN_DATA_FRACTION = 0.85
 THE_SEED = 42
-TRAIN_BATCH_SIZE = 64
-VALID_BATCH_SIZE = 32
+TRAIN_BATCH_SIZE = 2
+VALID_BATCH_SIZE = 1
 
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="classification_bench_resnet")
+task = Task.init(project_name="image2geolocation", task_name="resnet50_benchmark_dg")
 logger = Logger.current_logger()
 
 #%%
@@ -55,71 +56,107 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel(model_name='resnet50')
-# load_model(model, str(MODEL_PATH))
+model = BenchmarkModel(model_name = 'resnet50', NUM_OF_CLASSES=dataset.number_of_classes())
+load_model(model, str(MODEL_PATH))
 model.to(device)
 #%%%
 opt = th.optim.Adam([
-    {'params':model.model.parameters(), 'lr':3e-5},
-    {'params':model.classifier.parameters(), 'lr':3e-3},
+    {'params':model.parameters(), 'lr':1e-4},
 ])
-# load_model(opt, str(OPTIMIZER_PATH))
+load_model(opt, str(OPTIMIZER_PATH))
 # %%
 step = 0
 t_last_save_revert = time.time()
 t_last_save_all = time.time()
-loss = th.nn.CrossEntropyLoss()
-
-for ep in range(4*30):
+for ep in range(4*20):
     for ibatch, train_dict in enumerate(train_dataloader):
         imgs, labels = train_dict['images'], train_dict['labels']
         
-        batch = imgs[random.randint(0, 3)]
+        #imgs = imgs[random.randint(0, 3)].to(device)
+        batch = th.cat([img for img in imgs], dim=0)
         batch = batch.to(device)
         labels = labels.to(device)
         
+        #print("batch.size(): ", batch.size())
         preds = model(batch, device)
+        #print(preds)
+        
         tuple_of_y = []
-
-        for i in range(len(batch)):
+        #accept only third label
+        #then one-hot
+        for i in range(TRAIN_BATCH_SIZE):
             x = th.tensor(int(labels[i][2]))
-            y = th.tensor([x])
+            l = th.tensor([[x], [x], [x], [x]])
+            y = th.zeros([4, dataset.number_of_classes()])
+            y = y.scatter_(1, l, 1)
+            y = th.unsqueeze(y,0)
+            
             tuple_of_y.append(y)
+        #print(y_onehot.size())
+        #print(preds.size())
+        y_onehot = th.cat(tuple_of_y)
+        y_onehot = th.reshape(y_onehot, (1, 4*TRAIN_BATCH_SIZE,dataset.number_of_classes()))
+        
+        #print(preds)
+        #print(y_onehot)
+        #loss = F.binary_cross_entropy(y_onehot, preds)
+        #print(loss)
 
 
-        target = th.cat(tuple_of_y, dim=0).to(device)
-        output = loss(preds, target)
-
+        loss = th.nn.CrossEntropyLoss()
+        input = preds
+        target = y_onehot
+        #print(input.size())
+        #print(target.size())
+        output = loss(input, target)
 
 
         opt.zero_grad()
         output.backward()
         opt.step()
 
+
         if ibatch%10 == 0:
             logger.report_scalar("loss", "train", iteration=step , value=output.item())
             print(ep/4, step, output.item())
+            #print(y_onehot)
+            #print(preds)
         if ibatch % 150 == 0:
             for ibatch, valid_dict in enumerate(valid_dataloader):
                 with th.no_grad():
                     imgs, labels = valid_dict['images'], valid_dict['labels']
 
-                    batch = imgs[random.randint(0, 3)]
-
+                    batch = th.cat([img for img in imgs], dim=0)
                     batch = batch.to(device)
                     labels = labels.to(device)
 
                     preds = model(batch, device)
 
                     tuple_of_y = []
-                    for i in range(len(batch)):
+                    #accept only third label
+                    #then one-hot
+                    for i in range(VALID_BATCH_SIZE):
                         x = th.tensor(int(labels[i][2]))
-                        y = th.tensor([x])
+                        l = th.tensor([[x], [x], [x], [x]])
+                        y = th.zeros([4, dataset.number_of_classes()])
+                        y = y.scatter_(1, l, 1)
+                        y = th.unsqueeze(y,0)
+                        
                         tuple_of_y.append(y)
+                    #print(y_onehot.size())
+                    #print(preds.size())
+                    y_onehot = th.cat(tuple_of_y)
+                    y_onehot = th.reshape(y_onehot, (1,4*VALID_BATCH_SIZE,dataset.number_of_classes()))
 
+                    #print(y_onehot.size())
+                    #print(preds.size())
 
-                    target = th.cat(tuple_of_y, dim=0).to(device)
-                    output = loss(preds, target)
+                    #loss = F.binary_cross_entropy(y_onehot, preds)
+                    
+                    loss = th.nn.CrossEntropyLoss()
+                    input = preds
+                    target = y_onehot
+                    output = loss(input, target)
 
                     logger.report_scalar("loss", "valid", iteration=step , value=output.item())
                 break
@@ -136,8 +173,6 @@ for ep in range(4*30):
         
 
         step += 1
-
-
 
 # %%
 save_model(model, str(MODEL_PATH).split('.pt')[0] + str(step) + '.pt')

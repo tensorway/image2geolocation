@@ -54,9 +54,19 @@ class ClassificationDataset(Dataset):
     def number_of_classes(self):
         return self.csv['CLUSTER_kmeans'].nunique()
 
+    def centroid(self, class_number):
+        df = self.csv
+        rows = df.loc[df['CLUSTER_kmeans'] == class_number]
+        la, lo = rows['latitude'].mean(axis=0), rows['longitude'].mean(axis=0)
+        return la,lo
+        
+
+
+
 if __name__ == '__main__':
     dataset = ClassificationDataset()
     idx = random.randint(0, len(dataset)-1)
     print(dataset[idx])
     dataset[idx]['images'][0].show()
     print(dataset.number_of_classes())
+    print(dataset.centroid(3))
