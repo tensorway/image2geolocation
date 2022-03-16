@@ -35,6 +35,10 @@ def save_model(model, path):
     th.save(model.state_dict(), path)
 
 def seed_everything(seed: int):
+    '''
+    sets the random seed of everything to 
+    make everything reproducable
+    '''
     import random, os
     import numpy as np
     import torch
@@ -48,6 +52,10 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = True
 
 def draw_prediction(latitude, longitude, croatia_map=None, color=(0, 0, 255), img_path='assets/croatia_map.png'):
+    '''
+    takes a point (latitude and longitude) and
+    draws it on a numpy image
+    '''
     if croatia_map is None:
         croatia_map = cv2.imread(img_path)
     x1 = 0.0
@@ -73,3 +81,32 @@ def draw_prediction(latitude, longitude, croatia_map=None, color=(0, 0, 255), im
     croatia_map = cv2.circle(croatia_map, (f_inv(float(longitude)), g_inv(float(latitude))), 
                        radius=7, color=color, thickness=-1)
     return croatia_map
+
+
+def contrastive_labels_mat(batch_size):
+    '''
+    generates a matrix in blocks of ones
+    and with 0s on the diagonal
+    example for a batch size of 3
+    b 0 0
+    0 b 0
+    0 0 b 
+
+    where b (block):
+    0 1 1 1
+    1 0 1 1
+    1 1 0 1
+    1 1 1 0 
+    divided by 3 (to keep the sum of probabilities=1)
+    '''
+    mat = []
+    for i in range(batch_size):
+        for di in range(4):
+            row = []
+            for j in range(batch_size*4):
+                if 4*i <= j < 4*i+4 and 4*i+di!=j:
+                    row.append(1/3)
+                else:
+                    row.append(0)
+            mat.append(row)
+    return th.tensor(mat, dtype=th.float32)

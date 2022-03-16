@@ -12,22 +12,24 @@ class BenchmarkModel(nn.Module):
         self.model = th.hub.load('pytorch/vision:v0.10.0', model_name, pretrained=True)
         if model_name == 'mobilenet_v2':
             self.model.classifier[1] = nn.Linear(1280, 2)
-        else:   
+        elif 'resnet' in self.model_name:   
             num_ftrs = self.model.fc.in_features
-            self.model.fc = nn.Linear(num_ftrs, 2)
+            self.regressor = nn.Linear(num_ftrs, 2)
+            self.model.fc = nn.Identity() 
+
         self.model_name = model_name
 
     def embed(self, img):
         if self.model_name == 'mobilenet_v2':
             return self.model.features(img).mean(dim=-1).mean(dim=-1)
-        tmp = self.model.fc
-        self.model.fc = nn.Identity()
-        embedding = self.model(img)
-        self.model.fc = tmp
-        return embedding
+        if 'resnet' in self.model_name:
+            return self.model(img)
 
     def forward(self, img, device):
-        return self.model(img) + th.tensor([[44.475, 16.475]], device=device) #adding to converge faster
+        if self.model_name == 'mobilenet_v2':
+            return self.model(img) + th.tensor([[44.475, 16.475]], device=device) #adding to converge faster
+        if 'resnet' in self.model_name:
+            return self.regressor(self.model(img)) + th.tensor([[44.475, 16.475]], device=device) #adding to converge faster
 
 # %%
 if __name__ == '__main__':
