@@ -3,6 +3,10 @@ import math
 import numpy as np
 import torch as th
 
+import matplotlib
+import matplotlib.pyplot as plt
+from transforms import de_train_transform
+
 def great_circle_distance_relative(point1, point2):
     lat1, lon1 = point1
     lat2, lon2 = point2
@@ -83,30 +87,13 @@ def draw_prediction(latitude, longitude, croatia_map=None, color=(0, 0, 255), im
     return croatia_map
 
 
-def contrastive_labels_mat(batch_size):
-    '''
-    generates a matrix in blocks of ones
-    and with 0s on the diagonal
-    example for a batch size of 3
-    b 0 0
-    0 b 0
-    0 0 b 
-
-    where b (block):
-    0 1 1 1
-    1 0 1 1
-    1 1 0 1
-    1 1 1 0 
-    divided by 3 (to keep the sum of probabilities=1)
-    '''
-    mat = []
-    for i in range(batch_size):
-        for di in range(4):
-            row = []
-            for j in range(batch_size*4):
-                if 4*i <= j < 4*i+4 and 4*i+di!=j:
-                    row.append(1/3)
-                else:
-                    row.append(0)
-            mat.append(row)
-    return th.tensor(mat, dtype=th.float32)
+def visualize_batch(dataloader):
+    for b in dataloader:
+        break
+    n = len(b)//4
+    matplotlib.rcParams['figure.figsize'] = [40, 10*n]
+    f, axarr = plt.subplots(n,4)
+    for i in range(4):
+        for j in range(n):
+            axarr[j, i].imshow(de_train_transform(b[i+ j*4]))
+    return axarr

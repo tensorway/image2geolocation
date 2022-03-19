@@ -9,10 +9,11 @@ class BenchmarkModel(nn.Module):
     def __init__(self, model_name='mobilenet_v2'):
         super().__init__()
         th.hub._validate_not_a_forked_repo=lambda a,b,c: True
+        self.model_name = model_name
         self.model = th.hub.load('pytorch/vision:v0.10.0', model_name, pretrained=True)
         if model_name == 'mobilenet_v2':
             self.model.classifier[1] = nn.Linear(1280, 2)
-        elif 'resnet' in self.model_name:   
+        elif 'resnet' in model_name:   
             num_ftrs = self.model.fc.in_features
             self.regressor = nn.Linear(num_ftrs, 2)
             self.model.fc = nn.Identity() 

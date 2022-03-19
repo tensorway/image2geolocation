@@ -1,128 +1,125 @@
 #%%
-import torch
 import torch as th
 from tqdm import tqdm
-from pathlib import Path
-import torch.nn.functional as F
-from models import BenchmarkModel
-from dataset import Image2GeoDataset
-from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
-from transforms import train_transform, val_transform
-from utils import load_model, save_model, great_circle_distance, seed_everything, draw_prediction
-
-MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'mobilenetv2_benchmark'
-MODEL_NAME = 'resnet50_benchmark'
-MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
-THE_SEED = 42
-TRAIN_DATA_FRACTION = 0.85
-
-seed_everything(THE_SEED)
-fill_dataset = Image2GeoDataset(transform=val_transform)
-lentrain = int(TRAIN_DATA_FRACTION*len(fill_dataset))
-train_fill_dataset, _ = th.utils.data.random_split(
-    fill_dataset, 
-    [lentrain, len(fill_dataset)-lentrain], 
-    generator=torch.Generator().manual_seed(THE_SEED)
-    )
-train_fill_dataloader = DataLoader(
-                    train_fill_dataset,
-                    batch_size=32, 
-                    shuffle=False, 
-                    num_workers=12, 
-                    pin_memory=True, 
-)
-
-seed_everything(THE_SEED)
-dataset = Image2GeoDataset()
-lentrain = int(TRAIN_DATA_FRACTION*len(dataset))
-train_dataset, valid_dataset = th.utils.data.random_split(
-    dataset, 
-    [lentrain, len(dataset)-lentrain], 
-    generator=torch.Generator().manual_seed(THE_SEED)
-    )
-
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("using", device)
-
-# %%
-model = BenchmarkModel('resnet50')
-load_model(model, str(MODEL_PATH))
-model.to(device)
-model.eval()
-
-#%%
-base_labels = []
-base_embeddings = []
-with th.no_grad():
-    model.eval()
-    for train_dict in tqdm(train_fill_dataloader):
-        imgs, labels = train_dict['images'], train_dict['labels']
-        input = imgs[0].to(device)
-        embeddings = model.embed(input)
-        base_labels.append(labels)
-        base_embeddings.append(embeddings)
-base_labels = th.cat(base_labels, dim=0).to(device)
-base_embeddings = th.cat(base_embeddings, dim=0)
+from transforms import val_transform
+from utils import great_circle_distance
 
 
 
+def contrastive_labels_mat(batch_size, block_size=4):
+    '''
+    generates a matrix in blocks of ones
+    and with 0s on the diagonal
+    example for a batch size of 3
+    b 0 0
+    0 b 0
+    0 0 b 
+
+    where b (block) and block_size=4:
+    0 1 1 1
+    1 0 1 1
+    1 1 0 1
+    1 1 1 0 
+    '''
+    mat = []
+    for i in range(batch_size):
+        for di in range(block_size):
+            row = []
+            for j in range(batch_size*block_size):
+                if block_size*i <= j < block_size*(i+1) and block_size*i+di!=j:
+                    row.append(1)
+                else:
+                    row.append(0)
+            mat.append(row)
+    return th.tensor(mat, dtype=th.float32).unsqueeze(0)
+
+
+def get_zeroing_mat(batch_size, block_size):
+    '''
+    generates a matrix that zeroes out the 
+    elements in a similarity matrix to create 'several'
+    losses
+    '''
+    n = batch_size*block_size
+    zeroing_mat = th.ones(block_size-1, n,n)
+    for ib in range(block_size-1):
+        for i in range(n):
+            jblock_start = i//block_size * block_size
+            idx = (i%block_size+ib+1)%block_size + jblock_start
+            for j in range(block_size):
+                if j+jblock_start != idx:
+                    zeroing_mat[ib, i, j+jblock_start] = 0
+
+    return zeroing_mat
+
+def contrastive_labels_mat(batch_size, block_size):
+    '''
+    generates a matrix that zeroes out the 
+    elements in a similarity matrix to create 'several'
+    losses
+    '''
+    n = batch_size*block_size
+    zeroing_mat = th.zeros(block_size-1, n,n)
+    for ib in range(block_size-1):
+        for i in range(n):
+            jblock_start = i//block_size * block_size
+            idx = (i%block_size+ib+1)%block_size + jblock_start
+            for j in range(block_size):
+                if j+jblock_start == idx:
+                    zeroing_mat[ib, i, j+jblock_start] = 1
+
+    return zeroing_mat
 
 
 
-#%%
-# mobilenetv2 = 75
-import random
-temperature = 10
-dict_ = valid_dataset[random.randint(0, len(valid_dataset))]
-imgs, labels = dict_['images'], dict_['labels']
-with th.no_grad():
-    batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)
-    batch = th.cat(batch, dim=0).to(device)
-    input = batch[0].unsqueeze(0)
-    preds = model.embed(input)
-    print(labels)
-    preds = preds
-    scores = (base_embeddings@preds.transpose(0, 1)).to(device)
-    preds = base_labels * th.softmax(scores / temperature, dim=0)
-    preds = preds.sum(dim=0)
-    print(preds)
-    dist = 0
-    print(great_circle_distance(preds, labels))
-    dist += great_circle_distance(preds, labels)/len(preds)
-    row = preds[0]
-    print("avrg dist=", dist)
-    print("-"*15)
-
-# imgs[0].show()
-img = draw_prediction(preds[0], preds[1], color=(255, 0, 0))
-img = draw_prediction(labels[0], labels[1], croatia_map=img, color=(0, 0, 0))
-plt.imshow(img)
-imgs[0]
-# %%
-from tqdm import tqdm
-curr_dataset = valid_dataset
-loop = tqdm(range(len(curr_dataset)))
-base_labels = base_labels.to(device)
-temperature = 10
-totdist = 0 
-for idx in loop:
-    dict_ = curr_dataset[idx]
-    imgs, labels = dict_['images'], dict_['labels']
+def create_base_embeddings_and_labels(model, dataloader, device):
+    base_labels = []
+    base_embeddings = []
     with th.no_grad():
-        batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)
-        input = batch[0].to(device)
-        preds = model.embed(input)
-        # scores = (base_embeddings@preds.transpose(0, 1)).to(device)
-        # preds = base_labels * th.softmax(scores / temperature, dim=0)
-        # preds = preds.sum(dim=0)
-        topsi = th.topk(scores[:, 0], k=100).indices.to(device)
-        preds = base_labels[topsi].mean(dim=0)
+        model.eval()
+        for train_dict in tqdm(dataloader):
+            imgs, labels = train_dict['images'], train_dict['labels']
+            input = imgs[0].to(device)
+            embeddings = model.embed(input)
+            base_labels.append(labels)
+            base_embeddings.append(embeddings)
+        model.train()
+    base_labels = th.cat(base_labels, dim=0).to(device)
+    base_embeddings = th.cat(base_embeddings, dim=0)
+    return base_embeddings, base_labels
 
-        totdist += great_circle_distance(preds, labels)
-    loop.set_description(f"{totdist/(idx+1): 4.6f}")
 
 
-# %%
+def eval_ranking_loop(model, dataset, device, base_embeddings, base_labels, temperature=10):
+    loop = tqdm(range(len(dataset)))
+    model.eval()
+
+    totdist = 0 
+    for idx in loop:
+        sample = dataset[idx]
+        imgs, labels = sample['images'], sample['labels']
+        with th.no_grad():
+            batch = tuple(img.unsqueeze(0) for img in imgs)
+            input = batch[0].to(device)
+            preds = model.embed(input)
+            scores = (base_embeddings@preds.transpose(0, 1)).to(device)
+            preds = base_labels * th.softmax(scores / temperature, dim=0)
+            preds = preds.sum(dim=0)
+            # topsi = th.topk(scores[:, 0], k=100).indices.to(device)
+            # preds = base_labels[topsi].mean(dim=0)
+
+            totdist += great_circle_distance(preds, labels)
+        loop.set_description(f"{totdist/(idx+1): 4.6f}")
+
+    model.train()
+    return totdist/(idx+1)
+
+
+def transform270(image):
+    image[:, :10, :10]   = th.ones(3, 10, 10)*th.tensor([[[1]], [[-0.5]], [[-0.5]] ] )
+def transform180(image): 
+    image[:, -10:, :10]  = th.ones(3, 10, 10)*th.tensor([[[-0.5]], [[1]], [[-0.5]] ] )
+def transform90(image): 
+    image[:, :10, -10:]  = th.ones(3, 10, 10)*th.tensor([[[-0.5]], [[-0.5]], [[1]] ] )
+def transform0(image):
+    image[:, -10:, -10:] = th.ones(3, 10, 10)*th.tensor([[[-1]], [[1]], [[0]] ] )
