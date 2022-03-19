@@ -22,9 +22,9 @@ MODEL_NAME = 'simclrl'
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 THE_SEED = 42
-VALID_BATCH_SIZE = 64
+VALID_BATCH_SIZE = 32
 TRAIN_DATA_FRACTION = 0.85
-TRAIN_DATABASE_BATCH_SIZE = 64
+TRAIN_DATABASE_BATCH_SIZE = 32
 
 seed_everything(THE_SEED)
 
@@ -48,14 +48,14 @@ train_database_dataloader = DataLoader(
                     train_database_dataset, 
                     batch_size=TRAIN_DATABASE_BATCH_SIZE, 
                     shuffle=False, 
-                    num_workers=6, 
+                    num_workers=4, 
                     pin_memory=True, 
 )
 valid_dataloader = DataLoader(
                     valid_dataset, 
                     batch_size=VALID_BATCH_SIZE, 
                     shuffle=False, 
-                    num_workers=6, 
+                    num_workers=4, 
                     pin_memory=True, 
 )
 
