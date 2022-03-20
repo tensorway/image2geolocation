@@ -14,6 +14,7 @@ from utils import load_model, save_model, great_circle_distance, seed_everything
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
 MODEL_NAME = 'mobilenetv2_benchmark'
 MODEL_NAME = 'resnet50_benchmark'
+MODEL_NAME = 'resnet152_benchmark'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 THE_SEED = 42
 TRAIN_DATA_FRACTION = 0.85
@@ -30,7 +31,7 @@ train_fill_dataloader = DataLoader(
                     train_fill_dataset,
                     batch_size=32, 
                     shuffle=False, 
-                    num_workers=12, 
+                    num_workers=6, 
                     pin_memory=True, 
 )
 
@@ -48,7 +49,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel('resnet50')
+model = BenchmarkModel('resnet152')
 load_model(model, str(MODEL_PATH))
 model.to(device)
 model.eval()
@@ -75,7 +76,7 @@ base_embeddings = th.cat(base_embeddings, dim=0)
 #%%
 # mobilenetv2 = 75
 import random
-temperature = 10
+temperature = 40
 dict_ = valid_dataset[random.randint(0, len(valid_dataset))]
 imgs, labels = dict_['images'], dict_['labels']
 with th.no_grad():
@@ -106,23 +107,32 @@ from tqdm import tqdm
 curr_dataset = valid_dataset
 loop = tqdm(range(len(curr_dataset)))
 base_labels = base_labels.to(device)
-temperature = 10
+temperature = 40
 totdist = 0 
 for idx in loop:
     dict_ = curr_dataset[idx]
     imgs, labels = dict_['images'], dict_['labels']
     with th.no_grad():
         batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)
-        input = batch[0].to(device)
+        batch = th.cat(batch, dim=0)
+        # input = batch[0].to(device)
+        input = batch.to(device)
         preds = model.embed(input)
-        # scores = (base_embeddings@preds.transpose(0, 1)).to(device)
-        # preds = base_labels * th.softmax(scores / temperature, dim=0)
-        # preds = preds.sum(dim=0)
-        topsi = th.topk(scores[:, 0], k=100).indices.to(device)
-        preds = base_labels[topsi].mean(dim=0)
+        scores = (base_embeddings@preds.transpose(0, 1)).to(device)
+        preds = base_labels.unsqueeze(-1) * th.softmax(scores / temperature, dim=0).unsqueeze(1)
+        preds = preds.mean(dim=-1).sum(dim=0)
+        # topsi = th.topk(scores[:, 0], k=1).indices.to(device)
+        # preds = base_labels[topsi].mean(dim=0)
 
         totdist += great_circle_distance(preds, labels)
     loop.set_description(f"{totdist/(idx+1): 4.6f}")
 
 
+# %%
+import matplotlib.pyplot as plt
+plt.plot(scores.sort(dim=0, descending=True).values.detach().cpu().numpy())
+
+# %%
+val = th.softmax(scores / 40, dim=0)
+plt.plot(val.sort(dim=0, descending=True).values.detach().cpu().numpy()[:1000])
 # %%

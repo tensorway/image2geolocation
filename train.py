@@ -13,18 +13,18 @@ from transforms import train_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'resnet50_benchmark'
+MODEL_NAME = 'resnet152_benchmark'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
-SAVE_DELTA_ALL = 20*60 #in seconds, the model that is stored and overwritten to save space
-SAVE_DELTA_REVERT = 60*60 #in seconds, checkpoint models saved rarely to save storage
+SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
+SAVE_DELTA_REVERT = 20*60 #in seconds, checkpoint models saved rarely to save storage
 TRAIN_DATA_FRACTION = 0.85
 THE_SEED = 42
-TRAIN_BATCH_SIZE = 64
-VALID_BATCH_SIZE = 32
+TRAIN_BATCH_SIZE = 24
+VALID_BATCH_SIZE = 24
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="resnet50_benchmark_dg")
+task = Task.init(project_name="image2geolocation", task_name="resnet152_benchmark")
 logger = Logger.current_logger()
 
 #%%
@@ -40,7 +40,7 @@ train_dataloader = DataLoader(
                     train_dataset,
                     batch_size=TRAIN_BATCH_SIZE, 
                     shuffle=True, 
-                    num_workers=10, 
+                    num_workers=6, 
                     pin_memory=True, 
 )
 valid_dataloader = DataLoader(
@@ -54,12 +54,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel('resnet50')
+model = BenchmarkModel('resnet152')
 load_model(model, str(MODEL_PATH))
 model.to(device)
 #%%%
 opt = th.optim.Adam([
-    {'params':model.parameters(), 'lr':3e-4},
+    {'params':model.parameters(), 'lr':1e-4},
 ])
 load_model(opt, str(OPTIMIZER_PATH))
 # %%

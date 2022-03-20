@@ -13,6 +13,8 @@ from utils import load_model, save_model, great_circle_distance, seed_everything
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
 MODEL_NAME = 'mobilenetv2_benchmark'
 MODEL_NAME = 'resnet50_benchmark'
+MODEL_NAME = 'resnet152_benchmark'
+
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 THE_SEED = 42
 TRAIN_DATA_FRACTION = 0.85
@@ -31,7 +33,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel(model_name='resnet50')
+model = BenchmarkModel(model_name='resnet152')
 load_model(model, str(MODEL_PATH))
 model.to(device)
 
@@ -59,6 +61,7 @@ img = draw_prediction(labels[0], labels[1], croatia_map=img, color=(0, 0, 0))
 plt.imshow(img)
 imgs[0]
 # %%
+# resnet152 = 55.257
 # resnet50 = 62.98
 # mobilenetv2 = 98
 from tqdm import tqdm
