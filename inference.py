@@ -14,13 +14,15 @@ MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
 MODEL_NAME = 'mobilenetv2_benchmark'
 MODEL_NAME = 'resnet50_benchmark'
 MODEL_NAME = 'resnet152_benchmark'
+# MODEL_NAME = 'resnet152_benchmark_cleaned'
+
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 THE_SEED = 42
 TRAIN_DATA_FRACTION = 0.85
 
 seed_everything(THE_SEED)
-dataset = Image2GeoDataset()
+dataset = Image2GeoDataset(cleaned=False)
 lentrain = int(TRAIN_DATA_FRACTION*len(dataset))
 train_dataset, valid_dataset2 = th.utils.data.random_split(
     dataset, 
@@ -61,7 +63,8 @@ img = draw_prediction(labels[0], labels[1], croatia_map=img, color=(0, 0, 0))
 plt.imshow(img)
 imgs[0]
 # %%
-# resnet152 = 55.257
+# resnet152_cleaned on clean = 53.52
+# resnet152 = 55.79
 # resnet50 = 62.98
 # mobilenetv2 = 98
 from tqdm import tqdm
@@ -70,7 +73,7 @@ loop = tqdm(range(len(curr_dataset)))
 totdist = 0 
 model.eval()
 for idx in loop:
-    dict_ = curr_dataset[random.randint(0, len(curr_dataset))]
+    dict_ = curr_dataset[idx]
     imgs, labels = dict_['images'], dict_['labels']
     with th.no_grad():
         batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)

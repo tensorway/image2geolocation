@@ -13,7 +13,7 @@ from transforms import train_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'resnet152_benchmark'
+MODEL_NAME = 'resnet152_benchmark_cleaned'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
 SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
@@ -24,7 +24,7 @@ TRAIN_BATCH_SIZE = 24
 VALID_BATCH_SIZE = 24
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="resnet152_benchmark")
+task = Task.init(project_name="image2geolocation", task_name="resnet152_benchmark_cleaned")
 logger = Logger.current_logger()
 
 #%%

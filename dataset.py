@@ -1,3 +1,5 @@
+
+#%%
 import os
 import glob
 import pandas as pd
@@ -12,8 +14,9 @@ class Image2GeoDataset(Dataset):
     def __init__(
         self, 
         images_folder='dataset/data', 
-        csv_file='dataset/data.csv', 
-        transform=None
+        csv_file='dataset/data_with_names.csv', 
+        transform=None,
+        cleaned=True
         ):
         """
         Args:
@@ -22,12 +25,24 @@ class Image2GeoDataset(Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.csv = pd.read_csv(csv_file)
+        df = pd.read_csv(csv_file)
+        self.df = df
+        self.csv=df
+        if cleaned:
+            self.csv = df[(df['name'] == "google")]
+            self.csv = {'latitude':[], 'longitude':[], 'uuid':[]}
+            for lat, long, uuid, name in zip(self.df['latitude'], self.df['longitude'], self.df['uuid'], self.df['name']):
+                if name == 'google': 
+                    self.csv['latitude'].append(lat)
+                    self.csv['longitude'].append(long)
+                    self.csv['uuid'].append(uuid)
+
+            self.bad = df[(df['name'] != "google")]
         self.images_folder = images_folder
         self.transform = transform
 
     def __len__(self):
-        return len(self.csv)
+        return len(self.csv['uuid'])
 
     def get_labels(self):
         latitudes = self.csv['latitude']
@@ -49,9 +64,10 @@ class Image2GeoDataset(Dataset):
 
         return sample
 
-
+#%%
 if __name__ == '__main__':
     dataset = Image2GeoDataset()
     idx = random.randint(0, len(dataset)-1)
     print(dataset[idx])
-    dataset[idx]['images'][0].show()
+    print(len(dataset))
+# %%
