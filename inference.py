@@ -14,6 +14,8 @@ MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
 MODEL_NAME = 'mobilenetv2_benchmark'
 MODEL_NAME = 'resnet50_benchmark'
 MODEL_NAME = 'resnet152_benchmark'
+MODEL_NAME = 'efficientnetb4'
+
 # MODEL_NAME = 'resnet152_benchmark_cleaned'
 
 
@@ -35,7 +37,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel(model_name='resnet152')
+model = BenchmarkModel(model_name='nvidia_efficientnet_widese_b4')
 load_model(model, str(MODEL_PATH))
 model.to(device)
 
@@ -63,6 +65,7 @@ img = draw_prediction(labels[0], labels[1], croatia_map=img, color=(0, 0, 0))
 plt.imshow(img)
 imgs[0]
 # %%
+# efficientnet b4 = 38.68
 # resnet152_cleaned on clean = 53.52
 # resnet152 = 55.79
 # resnet50 = 62.98

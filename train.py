@@ -13,7 +13,7 @@ from transforms import train_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'resnet152_benchmark_cleaned'
+MODEL_NAME = 'efficientnetv2_rw_m'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
 SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
@@ -24,7 +24,7 @@ TRAIN_BATCH_SIZE = 24
 VALID_BATCH_SIZE = 24
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="resnet152_benchmark_cleaned")
+task = Task.init(project_name="image2geolocation", task_name="efficientnetv2_rw_m")
 logger = Logger.current_logger()
 
 #%%
@@ -54,7 +54,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel('resnet152')
+model = BenchmarkModel('efficientnetv2_rw_m')
 load_model(model, str(MODEL_PATH))
 model.to(device)
 #%%%
@@ -66,18 +66,22 @@ load_model(opt, str(OPTIMIZER_PATH))
 step = 0
 t_last_save_revert = time.time()
 t_last_save_all = time.time()
+scaler = torch.cuda.amp.GradScaler()
+
 for ep in range(4*20):
     for ibatch, train_dict in enumerate(train_dataloader):
-        imgs, labels = train_dict['images'], train_dict['labels']
-        imgs = imgs[random.randint(0, 3)].to(device)
-        preds = model(imgs, device)
-
-        labels = labels.to(device)
-        loss = ((labels-preds)**2).mean()
-
         opt.zero_grad()
-        loss.backward()
-        opt.step()
+        with torch.cuda.amp.autocast():
+            imgs, labels = train_dict['images'], train_dict['labels']
+            imgs = imgs[random.randint(0, 3)].to(device)
+            preds = model(imgs, device)
+
+            labels = labels.to(device)
+            loss = ((labels-preds)**2).mean()
+
+        scaler.scale(loss).backward()
+        scaler.step(opt)
+        scaler.update()
 
 
         if ibatch%10 == 0:
@@ -86,13 +90,14 @@ for ep in range(4*20):
         if ibatch % 150 == 0:
             for ibatch, valid_dict in enumerate(valid_dataloader):
                 with th.no_grad():
-                    imgs, labels = valid_dict['images'], valid_dict['labels']
-                    imgs = imgs[random.randint(0, 3)].to(device)
-                    preds = model(imgs, device)
-                    labels = labels.to(device)
-                    loss = ((labels-preds)**2).mean()
-                    logger.report_scalar("loss", "valid", iteration=step , value=loss.item())
-                break
+                    with torch.cuda.amp.autocast():
+                        imgs, labels = valid_dict['images'], valid_dict['labels']
+                        imgs = imgs[random.randint(0, 3)].to(device)
+                        preds = model(imgs, device)
+                        labels = labels.to(device)
+                        loss = ((labels-preds)**2).mean()
+                        logger.report_scalar("loss", "valid", iteration=step , value=loss.item())
+                    break
 
         if time.time() - t_last_save_all > SAVE_DELTA_ALL:
             save_model(model, str(MODEL_PATH))
