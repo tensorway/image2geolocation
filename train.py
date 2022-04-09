@@ -13,7 +13,7 @@ from transforms import train_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'efficientnetv2_rw_m'
+MODEL_NAME = 'efficientnetv2_rw_m_2'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
 SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
@@ -24,7 +24,7 @@ TRAIN_BATCH_SIZE = 24
 VALID_BATCH_SIZE = 24
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="efficientnetv2_rw_m")
+task = Task.init(project_name="image2geolocation", task_name="efficientnetv2_rw_m_2")
 logger = Logger.current_logger()
 
 #%%
@@ -86,7 +86,11 @@ for ep in range(4*20):
 
         if ibatch%10 == 0:
             logger.report_scalar("loss", "train", iteration=step , value=loss.item())
-            print(ep/4, step, loss.item())
+            dist = 0
+            for row, lrow in zip(preds, labels):
+                dist += great_circle_distance(row, lrow)/len(preds)
+            logger.report_scalar("distance", "train", iteration=step , value=dist)
+            print(ep/4, step, loss.item(), dist)
         if ibatch % 150 == 0:
             for ibatch, valid_dict in enumerate(valid_dataloader):
                 with th.no_grad():
@@ -97,6 +101,10 @@ for ep in range(4*20):
                         labels = labels.to(device)
                         loss = ((labels-preds)**2).mean()
                         logger.report_scalar("loss", "valid", iteration=step , value=loss.item())
+                        dist = 0
+                        for row, lrow in zip(preds, labels):
+                            dist += great_circle_distance(row, lrow)/len(preds)
+                        logger.report_scalar("distance", "valid", iteration=step , value=dist)
                     break
 
         if time.time() - t_last_save_all > SAVE_DELTA_ALL:
