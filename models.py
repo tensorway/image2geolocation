@@ -12,31 +12,60 @@ class BenchmarkModel(nn.Module):
         th.hub._validate_not_a_forked_repo=lambda a,b,c: True
         if model_name == 'mobilenet_v2':
             self.model = th.hub.load('pytorch/vision:v0.10.0', model_name, pretrained=True)
-            self.model.classifier[1] = nn.Linear(1280, 2)
+            self.model.classifier[1] = nn.Identity()
+            nfeatures = 1280
         elif 'nvidia_efficientnet' in model_name:
             self.model = th.hub.load('NVIDIA/DeepLearningExamples:torchhub', model_name, pretrained=True)
-            self.model.classifier[-1] = nn.Linear(1792, 2)
+            self.model.classifier[-1] = nn.Identity()
+            nfeatures = 1792
         elif 'efficientnetv2' in model_name:
             self.model = timm.create_model(model_name, pretrained=True)
             nfeatures = self.model.classifier.weight.shape[1]
-            self.model.classifier = nn.Linear(nfeatures, 2)
+            self.model.classifier = nn.Identity()
         else:   
             self.model = th.hub.load('pytorch/vision:v0.10.0', model_name, pretrained=True)
-            num_ftrs = self.model.fc.in_features
-            self.model.fc = nn.Linear(num_ftrs, 2)
+            nfeatures = self.model.fc.in_features
+            self.model.fc = nn.Identity()
+            
+        self.classifier = nn.Linear(nfeatures, 2)
+        self.cov  = nn.Linear(nfeatures, 3)
         self.model_name = model_name
 
     def embed(self, img):
-        if self.model_name == 'mobilenet_v2':
-            return self.model.features(img).mean(dim=-1).mean(dim=-1)            
-        tmp = self.model.fc
-        self.model.fc = nn.Identity()
-        embedding = self.model(img)
-        self.model.fc = tmp
-        return embedding
+        return self.model(img)
+
+    def load_state_dict(self, state_dict, okmore=True, okless=True):
+        own_state = self.state_dict()
+        cnt = 0
+        for name, param in state_dict.items():
+            if name not in own_state:
+                message = 'therer are more parameters is passed state_dict than in self ' + name + ' does not exit'
+                if okmore:
+                    print(message)
+                    continue
+                raise RuntimeError(message) 
+            if isinstance(param, nn.Parameter):
+                # backwards compatibility for serialized parameters
+                param = param.data
+            own_state[name].copy_(param)
+            cnt += 1
+        if cnt != len(own_state):
+            message = 'not all parameters loaded, there are less parameters in passed state_dict than in self'
+            if okless:
+                print(message)
+            else:
+                raise RuntimeError(message) 
+
 
     def forward(self, img, device):
-        return self.model(img) + th.tensor([[44.475, 16.475]], device=device) #adding to converge faster
+        embedded = self.embed(img)
+        mean = self.classifier(embedded)+th.tensor([[44.475, 16.475]], device=device)  #adding to coverge faster
+        cov = self.cov(embedded)
+
+        #reshape, make symetric and with nonnegative diagonal elements
+        cov = th.cat(( th.exp(cov[:, :1]), cov[:, 1:2], cov[:, 1:2] , th.exp(cov[:, 2:])), dim=1) 
+        cov = cov.view(-1, 2, 2) + th.tensor([[[2, 0], [0, 2]]], device=device)
+        return mean, cov
 
 # %%
 if __name__ == '__main__':
