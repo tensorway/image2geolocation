@@ -11,7 +11,7 @@ from transforms import train_transform, val_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything, draw_prediction, draw_gaussian_prediction, multiply_and_normalize_gaussians
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'nvidia_efficientnet_widese_b4_gaussian23844'
+MODEL_NAME = 'efficientnetv2_rw_m_2'
 
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
@@ -21,7 +21,7 @@ TRAIN_DATA_FRACTION = 0.85
 seed_everything(THE_SEED)
 dataset = Image2GeoDataset(cleaned=False)
 lentrain = int(TRAIN_DATA_FRACTION*len(dataset))
-train_dataset, valid_dataset2 = th.utils.data.random_split(
+_, valid_dataset2 = th.utils.data.random_split(
     dataset, 
     [lentrain, len(dataset)-lentrain], 
     generator=torch.Generator().manual_seed(THE_SEED)
@@ -30,9 +30,9 @@ train_dataset, valid_dataset2 = th.utils.data.random_split(
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
-model = BenchmarkModel(model_name='nvidia_efficientnet_widese_b4')
-load_model(model, str(MODEL_PATH))
-model.to(device)
+# model = BenchmarkModel(model_name='efficientnetv2_rw_m')
+# load_model(model, str(MODEL_PATH))
+# model.to(device)
 
 #%%
 import random
@@ -67,7 +67,7 @@ from tqdm import tqdm
 curr_dataset = valid_dataset2
 loop = tqdm(range(len(curr_dataset)))
 totdist = 0 
-model.eval()
+model.eval() 
 for idx in loop:
     dict_ = curr_dataset[idx]
     imgs, labels = dict_['images'], dict_['labels']

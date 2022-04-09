@@ -14,7 +14,7 @@ from itertools import chain
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'nvidia_efficientnet_widese_b4_gaussian'
+MODEL_NAME = 'efficientnetv2_rw_m_2'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
 SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
@@ -25,7 +25,7 @@ TRAIN_BATCH_SIZE = 32
 VALID_BATCH_SIZE = 32
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="nvidia_efficientnet_widese_b4_gaussian_finetune")
+task = Task.init(project_name="image2geolocation", task_name="efficientnetv2_rw_m_2_gaussian_finetune")
 logger = Logger.current_logger()
 
 #%%
