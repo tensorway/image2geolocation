@@ -14,7 +14,7 @@ from itertools import chain
 from utils import load_model, save_model, great_circle_distance, seed_everything
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'efficientnetv2_rw_m_2'
+MODEL_NAME = 'efficientnetv2_rw_m_2_gaussian'
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
 SAVE_DELTA_ALL = 10*60 #in seconds, the model that is stored and overwritten to save space
@@ -55,8 +55,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel('nvidia_efficientnet_widese_b4')
-load_model(model, 'model_checkpoints/model_efficientnetb4.pt')
+model = BenchmarkModel('efficientnetv2_rw_m')
+load_model(model, 'model_checkpoints/model_efficientnetv2_rw_m_22.pt')
 model.to(device)
 #%%%
 opt = th.optim.Adam([

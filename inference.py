@@ -11,7 +11,7 @@ from transforms import train_transform, val_transform
 from utils import load_model, save_model, great_circle_distance, seed_everything, draw_prediction, draw_gaussian_prediction, multiply_and_normalize_gaussians
 
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
-MODEL_NAME = 'efficientnetv2_rw_m_2'
+MODEL_NAME = 'efficientnetv2_rw_m_2_gaussian'
 
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
@@ -30,21 +30,23 @@ _, valid_dataset2 = th.utils.data.random_split(
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
-# model = BenchmarkModel(model_name='efficientnetv2_rw_m')
-# load_model(model, str(MODEL_PATH))
-# model.to(device)
+model = BenchmarkModel(model_name='efficientnetv2_rw_m')
+load_model(model, str(MODEL_PATH))
+model.to(device)
+cnt = 0
 
 #%%
 import random
 import matplotlib.pyplot as plt
 dict_ = valid_dataset2[random.randint(0, len(valid_dataset2))]
 imgs, labels = dict_['images'], dict_['labels']
-
+cnt =(cnt+1)%20
 with th.no_grad():
     batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)
     batch = th.cat(batch, dim=0).to(device)
     mus, covs = model(batch, device)
     mu, cov = multiply_and_normalize_gaussians(mus, covs)
+    # mu, cov = mus[0], covs[0]
     mu, cov = mu.to('cpu'), cov.to('cpu')
 
     print(mu)
@@ -52,8 +54,11 @@ with th.no_grad():
     print(great_circle_distance(mu, labels))
 
 img = draw_prediction(labels[0], labels[1], croatia_map=None, color=(0, 0, 255))
+img = draw_prediction(mus[0, 0].item(), mus[0, 1].item(), croatia_map=img, color=(0, 255, 255))
 img, _ = draw_gaussian_prediction(mu, cov, croatia_map=img);
 
+plt.imsave('gaussian_samples/gaussian'+str(cnt)+'.png', img)
+imgs[0].save('gaussian_samples/orig'+str(cnt)+'.png')
 plt.imshow(img)
 
 imgs[0]
@@ -76,7 +81,7 @@ for idx in loop:
         batch = th.cat(batch, dim=0).to(device)
         mus, covs = model(batch, device)
         mu, cov = multiply_and_normalize_gaussians(mus, covs)
-        dist = 0 #great_circle_distance(mu, labels)
+        dist = 0# great_circle_distance(mu, labels)
         for row in mus:
             dist += great_circle_distance(row, labels)/len(mu)
         #print(great_circle_distance(mu[0], labels))
