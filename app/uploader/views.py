@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 
 import sys
 
-sys.path.append("../")
+sys.path.append("backend_models")
 
 from PIL import Image
 import torch
@@ -24,7 +24,10 @@ from utils import (
     draw_prediction,
 )
 
-MODEL_CHECKPOINTS_PATH = Path("model_checkpoints/")
+MODEL_CHECKPOINTS_PATH = Path("backend_models/model_checkpoints/")
+import os
+
+print(os.listdir(MODEL_CHECKPOINTS_PATH))
 MODEL_NAME = "mobilenetv2_benchmark"
 MODEL_NAME = "resnet50_benchmark"
 MODEL_NAME = "resnet152_benchmark"
@@ -39,7 +42,7 @@ seed_everything(THE_SEED)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
-model = BenchmarkModel()
+model = BenchmarkModel("nvidia_efficientnet_widese_b4")
 load_model(model, str(MODEL_PATH))
 model.to(device)
 
@@ -54,10 +57,7 @@ class UploadImagesApi(APIView):
         if not files:
             return Response({"message": "images_not_found"}, 404)
 
-        imgs = []
-
-        for img_ in files:
-            imgs.append(Image.open(img_))
+        imgs = [Image.open(img_) for img_ in files]
 
         with th.no_grad():
             batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)

@@ -132,3 +132,5 @@ model_checkpoints/*
 ordering_files/*
 app/dataset/*
 .vscode
+app/backend_models/dataset
+app/backend_models/model_checkpoints/*

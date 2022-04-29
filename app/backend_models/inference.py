@@ -16,21 +16,25 @@ from utils import (
     draw_prediction,
 )
 
-MODEL_CHECKPOINTS_PATH = Path("model_checkpoints/")
+MODEL_CHECKPOINTS_PATH = Path("./backend_models/model_checkpoints/")
 MODEL_NAME = "mobilenetv2_benchmark"
 MODEL_NAME = "resnet50_benchmark"
 MODEL_NAME = "resnet152_benchmark"
-MODEL_NAME = "efficientnetb4"
-
-# MODEL_NAME = 'resnet152_benchmark_cleaned'
+MODEL_NAME = "efficientnetv2_rw_m_22"
 
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH / ("model_" + MODEL_NAME + ".pt")
 THE_SEED = 42
 TRAIN_DATA_FRACTION = 0.85
+import os
 
+print(os.path.exists(MODEL_PATH))
 seed_everything(THE_SEED)
-dataset = Image2GeoDataset(cleaned=False)
+dataset = Image2GeoDataset(
+    cleaned=False,
+    csv_file="backend_models/dataset/data_with_names.csv",
+    images_folder="backend_models/dataset/data",
+)
 lentrain = int(TRAIN_DATA_FRACTION * len(dataset))
 train_dataset, valid_dataset2 = th.utils.data.random_split(
     dataset,
@@ -43,7 +47,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("using", device)
 
 # %%
-model = BenchmarkModel(model_name="nvidia_efficientnet_widese_b4")
+model = BenchmarkModel(model_name="efficientnetv2_rw_m")
 load_model(model, str(MODEL_PATH))
 model.to(device)
 
@@ -53,7 +57,7 @@ import random
 dict_ = valid_dataset2[random.randint(0, len(valid_dataset2))]
 imgs, labels = dict_["images"], dict_["labels"]
 with th.no_grad():
-    batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)
+    batch = tuple(val_transform(img.convert("RGB")).unsqueeze(0) for img in imgs)
     batch = th.cat(batch, dim=0).to(device)
     preds = model(batch, device)
     print(preds)
@@ -67,8 +71,16 @@ with th.no_grad():
     print("-" * 15)
 
 # imgs[0].show()
-img = draw_prediction(row[0], row[1], color=(255, 0, 0))
-img = draw_prediction(labels[0], labels[1], croatia_map=img, color=(0, 0, 0))
+img = draw_prediction(
+    row[0], row[1], color=(255, 0, 0), img_path="backend_models/assets/croatia_map.png"
+)
+img = draw_prediction(
+    labels[0],
+    labels[1],
+    croatia_map=img,
+    color=(0, 0, 0),
+    img_path="backend_models/assets/croatia_map.png",
+)
 plt.imshow(img)
 imgs[0]
 # %%
@@ -87,7 +99,7 @@ for idx in loop:
     dict_ = curr_dataset[idx]
     imgs, labels = dict_["images"], dict_["labels"]
     with th.no_grad():
-        batch = tuple(val_transform(img).unsqueeze(0) for img in imgs)
+        batch = tuple(val_transform(img.convert("RGB")).unsqueeze(0) for img in imgs)
         batch = th.cat(batch, dim=0).to(device)
         preds = model(batch, device)
         dist = 0
@@ -117,4 +129,3 @@ for idx in loop:
     imgs, labels = dict_["images"], dict_["labels"]
     totdist += great_circle_distance(preds, labels)
     loop.set_description(f"{totdist/(idx+1): 4.6f}")
-
