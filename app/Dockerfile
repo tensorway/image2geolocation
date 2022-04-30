@@ -14,9 +14,11 @@ RUN apk update \
 
 # install dependencies
 RUN pip install --upgrade pip
+RUN python --version
 COPY ./requirements.txt .
+RUN pip install numpy tqdm opencv-python timm
+RUN pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
 RUN pip install -r requirements.txt
-RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
 # copy entrypoint.sh
 COPY ./entrypoint.sh .
 

@@ -23,6 +23,7 @@ class BenchmarkModel(nn.Module):
             self.model.classifier[-1] = nn.Identity()
             nfeatures = 1792
         elif "efficientnetv2" in model_name:
+            print("JES")
             self.model = timm.create_model(model_name, pretrained=True)
             nfeatures = self.model.classifier.weight.shape[1]
             self.model.classifier = nn.Identity()

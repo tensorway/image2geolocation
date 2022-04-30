@@ -32,7 +32,6 @@ def great_circle_distance(point1, point2):
 
 def load_model(model, path):
     try:
-        print(th.load(path))
         model.load_state_dict(th.load(path))
         print(f"loaded model ({type(model).__name__}) from {path}")
     except:

@@ -15,13 +15,13 @@ from utils import (
     seed_everything,
     draw_prediction,
 )
+import cv2
 
 MODEL_CHECKPOINTS_PATH = Path("./backend_models/model_checkpoints/")
 MODEL_NAME = "mobilenetv2_benchmark"
 MODEL_NAME = "resnet50_benchmark"
 MODEL_NAME = "resnet152_benchmark"
 MODEL_NAME = "efficientnetv2_rw_m_22"
-
 
 MODEL_PATH = MODEL_CHECKPOINTS_PATH / ("model_" + MODEL_NAME + ".pt")
 THE_SEED = 42
@@ -56,6 +56,7 @@ import random
 
 dict_ = valid_dataset2[random.randint(0, len(valid_dataset2))]
 imgs, labels = dict_["images"], dict_["labels"]
+model.eval()
 with th.no_grad():
     batch = tuple(val_transform(img.convert("RGB")).unsqueeze(0) for img in imgs)
     batch = th.cat(batch, dim=0).to(device)
