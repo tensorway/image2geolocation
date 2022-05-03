@@ -28,7 +28,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ALLOWED_HOSTS = "os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")"
 SECRET_KEY = "bilo-sta"
 DEBUG = 1
-ALLOWED_HOSTS = "*"
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
