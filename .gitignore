@@ -147,6 +147,16 @@ frontend/coverage
 # production
 frontend/build
 
+app/frontend/node_modules
+app/frontend/.pnp
+app/frontend/.pnp.js
+
+# testing
+app/frontend/coverage
+
+# production
+app/frontend/build
+
 # misc
 .DS_Store
 .env.local
