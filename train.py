@@ -17,9 +17,9 @@ from ranking import contrastive_labels_mat, create_base_embeddings_and_labels, e
 
 THE_SEED = 42
 
-SAVE_DELTA_ALL = 10*60          #in seconds, the model that is stored and overwritten to save space
+SAVE_DELTA_ALL = 30*60          #in seconds, the model that is stored and overwritten to save space
 VALID_TIME_DELTA = 10*60        #in seconds, how often to validate the model, validation is more expensive so less than in usual ml workloads
-SAVE_DELTA_REVERT = 20*60       #in seconds, checkpoint models saved rarely to save storage
+SAVE_DELTA_REVERT = 30*60       #in seconds, checkpoint models saved rarely to save storage
 
 TRAIN_BATCH_SIZE = 8
 VALID_BATCH_SIZE = 64
@@ -30,14 +30,13 @@ N_EVAL_VECTORS = 250
 VALID_TEMPERATURE = 0.001
 N_DATABASE_VECTORS = 2000
 
-MODEL_NAME = 'mobilenet_ranking'
-MODEL_NAME = 'resnet50_ranking'
+MODEL_NAME = 'efficientnetv2_rw_t_ranking'
 MODEL_CHECKPOINTS_PATH = Path('model_checkpoints/')
 MODEL_PATH = MODEL_CHECKPOINTS_PATH/('model_'+MODEL_NAME+'.pt')
 OPTIMIZER_PATH = MODEL_CHECKPOINTS_PATH/('optimizer_'+MODEL_NAME+'.pt')
 
 seed_everything(THE_SEED)
-task = Task.init(project_name="image2geolocation", task_name="resnet50_ranking")
+task = Task.init(project_name="image2geolocation", task_name="efficientnetv2_rw_t_ranking")
 logger = Logger.current_logger()
 
 
@@ -97,8 +96,8 @@ print("using", device)
 
 
 # %%
-model = BenchmarkModel('resnet50')
-load_model(model, str(MODEL_PATH))
+model = BenchmarkModel('efficientnetv2_rw_t')
+# load_model(model, str(MODEL_PATH))
 model.to(device)
 temperature = th.nn.parameter.Parameter(th.tensor([[0.50]], device=device), requires_grad=True)
 
